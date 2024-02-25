@@ -1,0 +1,126 @@
+:root {	font-size: 1.125rem;}
+@media (min-width: 500px) {
+	:root {
+	font-size: 1.5rem;
+}
+}
+@media (min-width: 800px) {
+	:root {
+	font-size: 1.75rem;
+}
+}
+@media (min-width: 1100px) {
+	:root {
+	font-size: 2rem;
+}
+}
+*, *:before, *:after {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+body {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	min-width: 100vw;
+	min-height: 100vh;
+	font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+	background-color: #111113;
+	text-decoration: none;
+	margin: 5px;
+}
+.messages {
+	overflow: auto;
+	width: 100vw;
+	max-height: 100vh;
+	padding: 2rem .2rem;
+	margin-top: 0.1rem;
+	color: #fff;
+	text-decoration: none;
+	text-decoration-line: none;
+}
+.bubble {
+	overflow: hidden;
+	display: inline-block;
+	margin: 0 0 .125rem 0;
+	padding: .5rem .85rem;
+	line-height: 1rem;
+	margin-top: 3px;
+	border-radius: 1.05rem;
+	transform-origin: 0 100%;
+	vertical-align: middle;
+	border: 3px solid #323232;
+	transition: border-radius .25s ease-out .075s;
+}
+.bubble.left.cornered {
+	border-bottom-left-radius: 0;
+}
+.bubble.left {
+	background: #181818;
+}
+.bubble:after {
+	content: "";
+	position: absolute;
+	bottom: 0;
+	left: -.2rem;
+	width: .2rem;
+	height: .2rem;
+	background-size: .2rem .2rem;
+	background-position: .2rem 0;
+	background-repeat: no-repeat;
+	transition: background-position .15s ease-in;
+}
+.bubble.cornered:after {
+	background-position: 0 0;
+}
+.bubble span {
+	display: block;
+}
+.bubble span.message {
+	opacity: 0;
+	margin-top: 2px;
+}
+.bubble a {
+	color: #0076FF;
+}
+.bubble .loading {
+	position: absolute;
+	width: 2.25rem;
+	font-size: 2rem;
+	line-height: 1rem;
+}
+.bubble .loading b {
+	display: inline-block;
+}
+a:link {
+	text-decoration: none;
+}
+a:visited {
+	text-decoration: none;
+}
+a:hover {
+	text-decoration: none;
+}
+a:active {
+	text-decoration: none;
+}
+button {
+	color: white;
+	background: #181818;
+	font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+	overflow: hidden;
+	display: inline-block;
+	margin: 0 0 .125rem 0;
+	padding: .5rem .85rem;
+	line-height: 1rem;
+	margin-top: 3px;
+	border-radius: 1.05rem;
+	transform-origin: 0 100%;
+	vertical-align: middle;
+	border: 3px solid #323232;
+	transition: border-radius .25s ease-out .075s;
+}
+.active {
+	background: #495e4f;
+}
