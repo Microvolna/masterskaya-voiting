@@ -19,7 +19,7 @@ def start_message(message):
         btn3 = types.InlineKeyboardButton(config.variant_3['topic'], callback_data='btn3')
         markup.add(btn3)
     
-    if message.chat.id == int(config.admin_id):
+    if message.chat.id == config.admin_id:
         bot.send_message(message.chat.id, config.message_text, reply_markup=markup)
         bot.send_message(config.chanel_id, config.message_text, reply_markup=markup)
     else:
@@ -27,7 +27,17 @@ def start_message(message):
 
 @bot.message_handler(commands=['github'])
 def statistic_message(message):
-    bot.send_message(message.chat.id, f'Ссылка на репозиторий: ')
+    bot.send_message(message.chat.id, f'Ссылка на репозиторий: https://github.com/Microvolna/masterskaya-voiting')
+
+@bot.message_handler(commands=['delete_data'])
+def statistic_message(message):
+    if message.chat.id == int(config.admin_id):
+        config.variant_1['vote'] = []
+        config.variant_2['vote'] = []
+        config.variant_3['vote'] = []
+        bot.send_message(message.chat.id, f'Данные очищены')
+    else:
+        bot.send_message(message.chat.id, '👋😌🌄У Вас нет прав.')
 
 @bot.message_handler(commands=['statistic'])
 def statistic_message(message):
@@ -38,31 +48,33 @@ def statistic_message(message):
     
 @bot.message_handler(commands=['send_post'])
 def send_post_message(message):
-    if message.chat.id == int(config.admin_id):
-        if config.variant_1['vote'] == []:
-            num_1 = 0
-        else:
+    if message.chat.id == config.admin_id:
+
+        num_1 = 0
+        num_2 = 0
+        num_3 = 0
+
+        if config.variant_1['vote'] != []:
             num_1 = len(config.variant_1['vote'])
 
-
-        if config.variant_2['vote'] == []:
-            num_2 = 0
-        else:
+        elif config.variant_2['vote'] != []:
             num_2 = len(config.variant_2['vote'])
 
-
-        if config.variant_3['vote'] == []:
-            num_3 = 0
-        else:
+        elif config.variant_3['vote'] != []:
             num_3 = len(config.variant_3['vote'])
+
+        print(config.variant_1['vote'])
+        print(config.variant_2['vote'])
+        print(config.variant_3['vote'])
+
 
         if num_1 == num_2 and num_1 == num_3:
             random.choice([config.variant_1['text'], config.variant_2['text'], config.variant_3['text']])
 
-        elif num_1 == num_3:
+        elif num_1 == num_3 and num_1 > num_2:
             b = random.choice([[config.variant_1['text']], config.variant_3['text']])
 
-        elif num_2 == num_3:
+        elif num_2 == num_3 and num_2 > num_1:
             b = random.choice([[config.variant_2['text']], config.variant_3['text']])
 
         elif num_1 > num_2 and num_1 > num_3:
@@ -75,7 +87,7 @@ def send_post_message(message):
             b = config.variant_3['text']
 
 
-        bot.send_message(config.chanel_id, f'{b}')
+        bot.send_message(config.chanel_id, b)
         bot.send_message(message.chat.id, f'''Сообщение отправлено в {config.chanel_id}
 
 Текст поста:
