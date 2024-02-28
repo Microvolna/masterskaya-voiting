@@ -1,120 +1,149 @@
-import telebot
-from telebot import types
-import random
+"""Бот для голосования за следующий пост в Telegram канале.
+
+Version: 0.1
+"""
+
+import asyncio
+from typing import Callable, Awaitable, Any
+
+from aiogram import Bot, Dispatcher
+from aiogram.filters import Command
+from aiogram.filters.callback_data import CallbackData
+from aiogram.types import (CallbackQuery, InlineKeyboardButton,
+                           InlineKeyboardMarkup, Message, Update, ErrorEvent,
+                           SwitchInlineQueryChosenChat)
+from loguru import logger
 
 import config
 
-bot = telebot.TeleBot(config.token)
 
-@bot.message_handler(commands=['start'])
-def start_message(message):
-    markup = types.InlineKeyboardMarkup()
-    if config.variant_1['posted'] != True:
-        btn1 = types.InlineKeyboardButton(config.variant_1['topic'], callback_data='btn1')
-        markup.add(btn1)
-    if config.variant_2['posted'] != True:
-        btn2 = types.InlineKeyboardButton(config.variant_2['topic'], callback_data='btn2')
-        markup.add(btn2)
-    if config.variant_3['posted'] != True:
-        btn3 = types.InlineKeyboardButton(config.variant_3['topic'], callback_data='btn3')
-        markup.add(btn3)
-    
-    if message.chat.id == config.admin_id:
-        bot.send_message(message.chat.id, config.message_text, reply_markup=markup)
-        bot.send_message(config.chanel_id, config.message_text, reply_markup=markup)
+dp = Dispatcher()
+
+
+## Если вы хотите отключить логгирование в боте
+## Закомментируйте необходимые вам декораторы
+@dp.message.middleware()
+@dp.callback_query.middleware()
+async def log_middleware(
+    handler: Callable[[Update, dict[str, Any]], Awaitable[Any]],
+    event: Update,
+    data: dict[str, Any],
+) -> Any:
+    """Отслеживает полученные ботом сообщения и callback query."""
+    if isinstance(event, CallbackQuery):
+        logger.info("[c] {}: {}", event.message.from_user.id, event.data)
     else:
-        bot.send_message(message.chat.id, '👋😌🌄У Вас нет прав.')
+        logger.info("[m] {}: {}", event.chat.id, event.text)
 
-@bot.message_handler(commands=['github'])
-def statistic_message(message):
-    bot.send_message(message.chat.id, f'Ссылка на репозиторий: https://github.com/Microvolna/masterskaya-voiting')
+    return await handler(event, data)
 
-@bot.message_handler(commands=['delete_data'])
-def statistic_message(message):
-    if message.chat.id == int(config.admin_id):
-        config.variant_1['vote'] = []
-        config.variant_2['vote'] = []
-        config.variant_3['vote'] = []
-        bot.send_message(message.chat.id, f'Данные очищены')
+
+# Вспомогательные фкнкции
+# =======================
+
+def get_vote_markup(posts: list[dict]) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=ic(x["topic"]), callback_data=f"vote:{i}")]
+        for i, x in enumerate(posts)
+    ])
+
+
+# Команды для администраторов бота
+# ================================
+
+@dp.message(Command("github"))
+async def github_commend(message: Message, bot: Bot):
+    """Отправляет ссылку на исходный код проекта."""
+    await message.answer((
+        "🛠️ Ссылка на репозиторий бота: "
+        "https://github.com/Microvolna/masterskaya-voiting"
+    ))
+
+@dp.message(Command("start"))
+async def start_command(message: Message, bot: Bot) -> None:
+    """Отправляет сообщение с голосованием в канал."""
+    if str(message.from_user.id) == config.admin_id:
+        await bot.send_message(config.chanel_id,
+            config.message_text,
+            reply_markup=get_vote_markup(config.posts)
+        )
+        await message.answer("✅ Голосование отправлено!")
     else:
-        bot.send_message(message.chat.id, '👋😌🌄У Вас нет прав.')
+        await message.answer("👋😌🌄 Кажется вы не администратор.")
 
-@bot.message_handler(commands=['statistic'])
-def statistic_message(message):
-    bot.send_message(message.chat.id, f'''
-1. {config.variant_1['topic']} - {len(config.variant_1['vote'])}
-2. {config.variant_2['topic']} - {len(config.variant_2['vote'])}
-3. {config.variant_3['topic']} - {len(config.variant_3['vote'])}''')
-    
-@bot.message_handler(commands=['send_post'])
-def send_post_message(message):
-    if message.chat.id == config.admin_id:
+@dp.message(Command("send_post"))
+async def send_post_command(message: Message, bot: Bot) -> None:
+    """Завершает голосование и отправляет победивший пост."""
+    if str(message.from_user.id) == config.admin_id:
+        send_post = config.posts[0]
 
-        num_1 = 0
-        num_2 = 0
-        num_3 = 0
+        # Получем пост с наибольшим числом голосов
+        for post in config.posts[1:]:
+            if len(post['vote']) > len(send_post['vote']):
+                send_post = post
 
-        if config.variant_1['vote'] != []:
-            num_1 = len(config.variant_1['vote'])
+        await bot.send_message(config.chanel_id, send_post["text"])
+        await message.answer(f"📝 Пост {send_post['topic']} отправлен!")
 
-        elif config.variant_2['vote'] != []:
-            num_2 = len(config.variant_2['vote'])
-
-        elif config.variant_3['vote'] != []:
-            num_3 = len(config.variant_3['vote'])
-
-        print(config.variant_1['vote'])
-        print(config.variant_2['vote'])
-        print(config.variant_3['vote'])
-
-
-        if num_1 == num_2 and num_1 == num_3:
-            random.choice([config.variant_1['text'], config.variant_2['text'], config.variant_3['text']])
-
-        elif num_1 == num_3 and num_1 > num_2:
-            b = random.choice([[config.variant_1['text']], config.variant_3['text']])
-
-        elif num_2 == num_3 and num_2 > num_1:
-            b = random.choice([[config.variant_2['text']], config.variant_3['text']])
-
-        elif num_1 > num_2 and num_1 > num_3:
-            b = config.variant_1['text']
-
-        elif num_2 > num_1 and num_2 > num_3:
-            b = config.variant_2['text']
-
-        elif num_3 > num_1 and num_3 > num_2:
-            b = config.variant_3['text']
-
-
-        bot.send_message(config.chanel_id, b)
-        bot.send_message(message.chat.id, f'''Сообщение отправлено в {config.chanel_id}
-
-Текст поста:
-                         
-{b}''')
     else:
-        bot.send_message(message.chat.id, '👋😌🌄У Вас нет прав.')
+        await message.answer("👋😌🌄 Кажется вы не администратор.")
 
-@bot.callback_query_handler(func=lambda call: True)
-def callback_inline(call):
-    if call.data == "btn1":
-        if call.from_user.id in config.variant_1['vote'] or call.from_user.id in config.variant_2['vote'] or call.from_user.id in config.variant_3['vote']:
-            pass
-        else:
-            config.variant_1['vote'].append(call.from_user.id)
-            bot.send_message(config.admin_id, '1')
-    if call.data == "btn2":
-        if call.from_user.id in config.variant_1['vote'] or call.from_user.id in config.variant_2['vote'] or call.from_user.id in config.variant_3['vote']:
-            pass
-        else:
-            config.variant_2['vote'].append(call.from_user.id)
-            bot.send_message(config.admin_id, '2')
-    if call.data == "btn3":
-        if call.from_user.id in config.variant_1['vote'] or call.from_user.id in config.variant_2['vote'] or call.from_user.id in config.variant_3['vote']:
-            pass
-        else:
-            config.variant_3['vote'].append(call.from_user.id)
-            bot.send_message(config.admin_id, '3')
 
-bot.infinity_polling()
+# Команды для обычных пользователей
+# =================================
+
+@dp.message(Command("stats"))
+async def stats_commend(message: Message) -> None:
+    """Отображает статистику голосования."""
+    text = "🌟 Статистика голосования:\n"
+    total_votes = 0
+
+    for i, x in enumerate(sorted(
+        config.posts,
+        key=lambda x: len(x["vote"]),
+        reverse=True
+    )):
+        text += f"\n-- {i+1}. {x['topic']} -- {len(x['vote'])}"
+        total_votes += len(x["vote"])
+
+    await message.answer(text)
+
+
+# Обработка голосования
+# =====================
+
+class VoteCallback(CallbackData, prefix="vote"):
+    post_index: int
+
+@dp.callback_query(VoteCallback.filter())
+async def vote_callback(query: CallbackQuery, callback_data: VoteCallback):
+    """Обрабатывает все входящие голоса."""
+    selected_post = config.posts[callback_data.post_index]
+
+    if query.from_user.id not in selected_post['vote']:
+        selected_post['vote'].append(query.from_user.id)
+        await query.answer(f"Вы 🌟 за: {selected_post['topic']}")
+    else:
+        selected_post['vote'].remove(query.from_user.id)
+        await query.answer(f"Отмена 🌟 за: {selected_post['topic']}")
+
+
+@dp.errors()
+async def error_handler(exception: ErrorEvent) -> None:
+    """Ловит и обрабатывает все исключения."""
+    logger.exception(exception.exception)
+
+
+async def main():
+    """Загружает бота и запускает обработку сообщений."""
+    bot = Bot(config.token)
+
+    logger.info("Start polling ...")
+    await dp.start_polling(bot)
+
+
+# Запуска бота
+# ============
+
+if __name__ == "__main__":
+    asyncio.run(main())
